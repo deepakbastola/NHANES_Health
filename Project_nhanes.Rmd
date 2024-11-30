@@ -1,0 +1,736 @@
+---
+title: "The Interplay Between Demographic Factors, Lifestyle, and Metabolic Health: A Statistical Perspective"
+author: "Deepak Bastola"
+date: "2024-11-18"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+options(repos = c(CRAN = "https://cran.r-project.org"))
+```
+
+# Load dataset
+```{r}
+library(readxl)
+nhanes <- read_excel("NHANES.xlsx")
+```
+
+```{r}
+head(nhanes)
+```
+
+```{r}
+summary(nhanes)
+```
+
+# Explanatory Data Analysis
+
+### Missing Check
+
+```{r}
+colSums(is.na(nhanes))
+```
+```{r}
+data <- nhanes
+data <- data[
+  data$Respondent_Age >= 0 & data$Respondent_Age <= 120 &                # Respondent Age
+  data$BMI >= 10 & data$BMI <= 60 &                                      # BMI
+  data$Glucose_After_Fasting >= 40 & data$Glucose_After_Fasting <= 300 & # Glucose After Fasting
+  data$Glucose_Oral >= 40 & data$Glucose_Oral <= 500 &                   # Glucose Oral
+  data$Insulin_Level >= 1 & data$Insulin_Level <= 60,                    # Insulin Level
+  ]
+summary(data)
+dim(data)
+```
+
+We are filtering the dataset to ensure that the analysis is based on valid and plausible data, minimizing the impact of extreme outliers or data entry errors. The valid ranges applied are: Respondent *Age (0–120 years), BMI (10–60), Glucose After Fasting (40–300 mg/dL), Glucose Oral (40–500 mg/dL), and Insulin Level (1–60 µIU/mL).* These ranges are grounded in practical and medical plausibility, ensuring the dataset reflects realistic values for the studied population. Filtering these variables reduces noise, enhances reliability, and supports accurate statistical analysis and interpretation.
+
+
+
+
+
+## Checking if the variables of interest satisfy the assumptions for t-test
+
+### Normality Tests
+
+1. Visual Assessment:
+
+
+```{r, fig.width=12, fig.height=6}
+# Set graphical parameters for 3 plots per variable
+par(mfrow = c(1, 3),  # 1 row, 3 columns
+    mar = c(5, 5, 4, 2),  # Adjust margins
+    cex.main = 1.5,  # Title size
+    cex.axis = 1.2,  # Axis text size
+    cex.lab = 1.3)   # Label size
+
+
+# Plot for Respondent Age
+boxplot(data$Respondent_Age, 
+        main = "Respondent Age - Boxplot", 
+        ylab = "Age (Years)", 
+        col = "lightblue", 
+        border = "darkblue", 
+        notch = TRUE, 
+        outline = TRUE)
+hist(data$Respondent_Age, 
+     main = "Respondent Age - Histogram", 
+     xlab = "Age (Years)", 
+     col = "lightblue", 
+     border = "darkblue", 
+     breaks = 5)
+qqnorm(data$Respondent_Age, 
+       main = "Respondent Age - Q-Q Plot", 
+       col = "blue", 
+       pch = 19)
+qqline(data$Respondent_Age, col = "red", lwd = 2)
+```
+
+
+```{r, fig.width=12, fig.height=6}
+par(mfrow = c(1, 3),  # 1 row, 3 columns
+    mar = c(5, 5, 4, 2),  # Adjust margins
+    cex.main = 1.5,  # Title size
+    cex.axis = 1.2,  # Axis text size
+    cex.lab = 1.3)   # Label size
+
+# Plot for BMI
+boxplot(data$BMI, 
+        main = "BMI - Boxplot", 
+        ylab = "BMI (kg/m²)", 
+        col = "lightgreen", 
+        border = "darkgreen", 
+        notch = TRUE, 
+        outline = TRUE)
+hist(data$BMI, 
+     main = "BMI - Histogram", 
+     xlab = "BMI (kg/m²)", 
+     col = "lightgreen", 
+     border = "darkgreen", 
+     breaks = 15)
+qqnorm(data$BMI, 
+       main = "BMI - Q-Q Plot", 
+       col = "darkgreen", 
+       pch = 19)
+qqline(data$BMI, col = "red", lwd = 2)
+```
+
+
+```{r, fig.width=12, fig.height=6}
+par(mfrow = c(1, 3),  # 1 row, 3 columns
+    mar = c(5, 5, 4, 2),  # Adjust margins
+    cex.main = 1.5,  # Title size
+    cex.axis = 1.2,  # Axis text size
+    cex.lab = 1.3)   # Label size
+
+# Plot for Glucose After Fasting
+boxplot(data$Glucose_After_Fasting, 
+        main = "Glucose After Fasting - Boxplot", 
+        ylab = "Glucose (mg/dL)", 
+        col = "lightpink", 
+        border = "darkred", 
+        notch = TRUE, 
+        outline = TRUE)
+hist(data$Glucose_After_Fasting, 
+     main = "Glucose After Fasting - Histogram", 
+     xlab = "Glucose (mg/dL)", 
+     col = "lightpink", 
+     border = "darkred", 
+     breaks = 15)
+qqnorm(data$Glucose_After_Fasting, 
+       main = "Glucose After Fasting - Q-Q Plot", 
+       col = "purple", 
+       pch = 19)
+qqline(data$Glucose_After_Fasting, col = "red", lwd = 2)
+```
+
+
+```{r, fig.width=12, fig.height=6}
+par(mfrow = c(1, 3),  # 1 row, 3 columns
+    mar = c(5, 5, 4, 2),  # Adjust margins
+    cex.main = 1.5,  # Title size
+    cex.axis = 1.2,  # Axis text size
+    cex.lab = 1.3)   # Label size
+
+# Plot for Insulin Level
+boxplot(data$Insulin_Level, 
+        main = "Insulin Level - Boxplot", 
+        ylab = "Insulin (µU/mL)", 
+        col = "lightyellow", 
+        border = "orange", 
+        notch = TRUE, 
+        outline = TRUE)
+hist(data$Insulin_Level, 
+     main = "Insulin Level - Histogram", 
+     xlab = "Insulin (µU/mL)", 
+     col = "lightyellow", 
+     border = "orange", 
+     breaks = 15)
+qqnorm(data$Insulin_Level, 
+       main = "Insulin Level - Q-Q Plot", 
+       col = "darkcyan", 
+       pch = 19)
+qqline(data$Insulin_Level, col = "red", lwd = 2)
+
+# Reset graphical parameters to default
+par(mfrow = c(1, 1))
+```
+
+
+Both the histograms and Q-Q plots shows the violations of normality. 
+
+2. Formal Normality Test (Shapiro-Wilk Test):
+
+```{r}
+shapiro.test(data$Respondent_Age)
+shapiro.test(data$BMI)
+shapiro.test(data$Glucose_After_Fasting)
+shapiro.test(data$Insulin_Level)
+```
+Shapiro-Wilk also support the visual interpretation. 
+
+```{r}
+library(goftest)
+nortest::ad.test(data$Respondent_Age)
+nortest::ad.test(data$BMI)
+nortest::ad.test(data$Glucose_After_Fasting)
+nortest::ad.test(data$Insulin_Level)
+```
+
+**Conclusion:** Although the visual interpretation and Shapiro-Wilk test indicates that the continuous variables in the dataset deviate significantly from normality (p < 0.05), the sample sizes for these variables are sufficiently large (\(n > 30\)). According to the Central Limit Theorem, the sampling distribution of the mean approximates normality for large samples, making the t-test robust to moderate deviations from normality. While acknowledging this assumption violation, we will proceed with t-tests, as they are appropriate for our dataset size and objectives. Outliers and skewness will be considered when interpreting results.
+
+### Calculate skewness for each continuous variable
+
+```{r, warning=FALSE}
+library(e1071)
+
+skewness_values <- sapply(data[, c("Respondent_Age", "BMI", "Glucose_After_Fasting", "Glucose_Oral", "Insulin_Level")], 
+                          function(x) skewness(x, na.rm = TRUE))
+print(skewness_values)
+
+```
+
+**Thresholds for skewness check**
+
+Absolute value of Skewness is less than 0.5: Approximate symmetry.
+Absolute value of Skewness is greater than 1: Substantial skewness.
+
+
+### Applying log transformations to specific variables and Create a copy of the original dataset
+
+
+```{r}
+data_log <- data
+
+data_log$BMI <- log(data_log$BMI)
+data_log$Glucose_After_Fasting <- log(data_log$Glucose_After_Fasting)
+data_log$Glucose_Oral <- log(data_log$Glucose_Oral)
+data_log$Insulin_Level <- log(data_log$Insulin_Level)
+
+# Check the structure or preview the first few rows of the transformed dataset
+str(data_log)
+head(data_log)
+```
+
+**Skewness after transformation**
+
+```{r}
+skewness_values <- sapply(data_log[, c("Respondent_Age", "BMI", "Glucose_After_Fasting", "Glucose_Oral", "Insulin_Level")], 
+                          function(x) skewness(x, na.rm = TRUE))
+print(skewness_values)
+```
+
+The skewness results show that **Respondent Age** and **Insulin Level** are approximately symmetric, while **BMI** and **Glucose Oral** have mild positive skewness. **Glucose After Fasting** remains highly skewed, suggesting it may require further adjustment or robust methods for analysis.
+
+## t-test
+
+### One-Sample t-Test:
+
+Test if mean BMI differs from 25
+
+
+```{r}
+t.test(data_log$BMI, mu = log(25), alternative = "two.sided")
+```
+
+The one-sample t-test shows that the mean log-transformed BMI (\(3.296\)) is significantly different from the hypothesized value of \(3.219\) (\(t = 15.514\), \(p < 2.2 \times 10^{-16}\)). The 95% confidence interval (\(3.286\), \(3.305\)) does not include the hypothesized mean, confirming a significant difference.
+
+### Two-Sample t-Test:
+
+Test if BMI between males (Gender = 1) and females (Gender = 2) is different
+
+```{r}
+t.test(data_log$BMI ~ data$Gender, alternative = "two.sided", var.equal = TRUE)
+
+```
+
+The two-sample t-test comparing log-transformed BMI between genders shows no significant difference (\(t = -1.774\), \(p = 0.076\)). The 95% confidence interval (\(-0.037, 0.002\)) includes zero, suggesting that the mean BMI between males (\(3.287\)) and females (\(3.304\)) is not significantly different.
+
+### Paired t-Test:
+
+Test if fasting glucose and oral glucose levels are different
+
+```{r}
+t.test(data_log$Glucose_After_Fasting, data_log$Glucose_Oral, paired = TRUE, alternative = "two.sided")
+```
+
+The paired t-test comparing log-transformed fasting glucose and oral glucose levels shows a significant difference (\(t = -14.763\), \(p < 2.2 \times 10^{-16}\)). The 95% confidence interval (\(-0.102, -0.078\)) does not include zero, with a mean difference of \(-0.090\), indicating that oral glucose levels are significantly higher than fasting glucose levels on average.
+
+# Chapter 3: Inferences About More Than Two Population Central Values
+
+### One-Way ANOVA to Compare BMI Across Age Groups
+
+```{r}
+data$Age_Group <- cut(data$Respondent_Age, breaks = c(0, 30, 60, 120), 
+                      labels = c("Young", "Middle-aged", "Elderly"))
+```
+
+Let's check the model assumptions first: 
+
+**Normality for each Group**
+
+```{r}
+by(data$BMI, data$Age_Group, function(x) shapiro.test(x))
+
+```
+**Transformation to see if we get normality**
+
+```{r}
+library(MASS)
+# Fit a linear model
+lm_fit <- lm(BMI ~ Age_Group, data = data)
+
+# Perform Box-Cox transformation
+boxcox_result <- boxcox(lm_fit, lambda = seq(-2, 2, by = 0.1))
+
+# Identify the optimal lambda
+optimal_lambda <- boxcox_result$x[which.max(boxcox_result$y)]
+print(optimal_lambda)
+
+# Apply the optimal transformation to BMI
+data$BMI_transformed <- ifelse(optimal_lambda == 0, log(data$BMI), data$BMI^optimal_lambda)
+```
+```{r}
+data$BMI_adjusted <- data$BMI + 0.001  # Add a small constant
+data$BMI_boxcox <- (data$BMI_adjusted^-0.707 - 1) / -0.707
+
+```
+
+```{r}
+# Re-run the Shapiro-Wilk test on the transformed variable for each Age Group
+by(data$BMI_boxcox, data$Age_Group, function(x) shapiro.test(x))
+```
+### Perform Levene's Test for homogeneity of variances
+
+```{r}
+library(car)
+
+leveneTest(data$BMI_boxcox ~ data$Age_Group, data = data)
+
+```
+**Perform standard ANOVA**
+
+```{r}
+anova_result <- aov(BMI_boxcox ~ Age_Group, data = data)
+summary(anova_result)
+
+```
+
+Levene’s Test indicates a significant violation of the homogeneity of variances assumption (\(p < 2.2 \times 10^{-16}\)). Unlike standard ANOVA, Welch’s ANOVA is robust to unequal variances, making it a more appropriate choice for analyzing this data.
+
+**Perform Welch's ANOVA**
+```{r}
+welch_anova_result <- oneway.test(BMI_boxcox ~ Age_Group, data = data, var.equal = FALSE)
+print(welch_anova_result)
+```
+
+Both tests confirm that there are significant differences in mean Box-Cox transformed BMI among the age groups. However, due to the violation of the equal variance assumption, the Welch’s ANOVA results are more reliable and should be used as the primary conclusion.
+
+### Perform Tukey's HSD test
+
+```{r}
+tukey_result <- TukeyHSD(anova_result)
+print(tukey_result)
+```
+
+**Perform Games-Howell post-hoc test**
+
+Since Welch's ANOVA was the more appropriate test, we should use a Games-Howell post-hoc test to compare all pairwise differences between groups. This method is specifically designed for situations where variances are unequal.
+
+```{r}
+library(PMCMRplus)
+games_howell_result <- gamesHowellTest(BMI_boxcox ~ Age_Group, data = data)
+print(games_howell_result)
+```
+
+The Games-Howell test reveals significant differences in BMI among all age groups. Specifically:
+
+- Young individuals have significantly different BMI compared to both Middle-aged and Elderly groups.
+- The difference between Middle-aged and Elderly groups is weaker but still statistically significant.
+
+```{r}
+# Function to calculate Cohen's d
+cohens_d <- function(group1, group2) {
+  mean_diff <- mean(group1, na.rm = TRUE) - mean(group2, na.rm = TRUE)
+  pooled_sd <- sqrt((var(group1, na.rm = TRUE) + var(group2, na.rm = TRUE)) / 2)
+  d <- mean_diff / pooled_sd
+  return(d)
+}
+
+# Calculate Cohen's d for each pair
+young <- data$BMI_boxcox[data$Age_Group == "Young"]
+middle_aged <- data$BMI_boxcox[data$Age_Group == "Middle-aged"]
+elderly <- data$BMI_boxcox[data$Age_Group == "Elderly"]
+
+cohens_d_young_middle <- cohens_d(young, middle_aged)
+cohens_d_young_elderly <- cohens_d(young, elderly)
+cohens_d_middle_elderly <- cohens_d(middle_aged, elderly)
+
+# Print results
+cat("Cohen's d (Young vs. Middle-aged):", cohens_d_young_middle, "\n")
+cat("Cohen's d (Young vs. Elderly):", cohens_d_young_elderly, "\n")
+cat("Cohen's d (Middle-aged vs. Elderly):", cohens_d_middle_elderly, "\n")
+
+```
+**Rule of Thumbs for Cohen's d values**
+- Small: 0.2
+- Medium: 0.5
+- Large: 0.8 
+
+*Interpretation of Cohen's d Effect Sizes:*
+
+1. **Young vs. Middle-aged**:
+   - **Cohen's d = -0.613**:
+     - This indicates a **moderate effect size**.
+     - The negative sign shows that the mean BMI of the **Young** group is lower than the **Middle-aged** group.
+
+2. **Young vs. Elderly**:
+   - **Cohen's d = -0.510**:
+     - This also indicates a **moderate effect size**.
+     - The negative sign shows that the mean BMI of the **Young** group is lower than the **Elderly** group.
+
+3. **Middle-aged vs. Elderly**:
+   - **Cohen's d = 0.136**:
+     - This indicates a **small effect size**.
+     - The positive sign shows that the mean BMI of the **Middle-aged** group is slightly higher than the **Elderly** group.
+
+
+
+ Summary:
+- The most notable differences are between the **Young** group and the other two groups (**Middle-aged** and **Elderly**) with moderate effect sizes.
+- The difference between **Middle-aged** and **Elderly** is much smaller, suggesting that these two groups have more similar BMI values.
+
+
+
+
+```{r}
+library(ggplot2)
+library(dplyr)
+# Calculate means and confidence intervals for each group
+summary_stats <- data %>%
+  group_by(Age_Group) %>%
+  summarise(
+    mean = mean(BMI_boxcox, na.rm = TRUE),
+    lower = mean - qt(0.975, df=n()-1) * (sd(BMI_boxcox, na.rm = TRUE) / sqrt(n())),
+    upper = mean + qt(0.975, df=n()-1) * (sd(BMI_boxcox, na.rm = TRUE) / sqrt(n()))
+  )
+print(summary_stats)
+
+```
+
+### Summary of Results from Group Means and Confidence Intervals:
+
+1. **Young**:
+   - **Mean BMI (Box-Cox Transformed)**: 1.266
+   - **95% Confidence Interval**: (1.265, 1.268)
+
+2. **Middle-aged**:
+   - **Mean BMI (Box-Cox Transformed)**: 1.280
+   - **95% Confidence Interval**: (1.279, 1.282)
+
+3. **Elderly**:
+   - **Mean BMI (Box-Cox Transformed)**: 1.278
+   - **95% Confidence Interval**: (1.276, 1.279)
+
+
+### Key Insights:
+- **Young vs. Middle-aged**:
+  - The confidence intervals do not overlap, indicating a statistically significant difference between these two groups.
+
+- **Young vs. Elderly**:
+  - Similarly, the confidence intervals do not overlap, confirming a significant difference.
+
+- **Middle-aged vs. Elderly**:
+  - The confidence intervals slightly overlap, suggesting a smaller and less significant difference between these two groups, consistent with the small Cohen's d value.
+
+
+### Conclusion:
+The BMI significantly differs across the three age groups, with the most notable differences between the **Young** group and the other two groups (**Middle-aged** and **Elderly**). The difference between **Middle-aged** and **Elderly** is minor.
+
+
+```{r}
+# Plot the means with confidence intervals
+ggplot(summary_stats, aes(x = Age_Group, y = mean, ymin = lower, ymax = upper)) +
+  geom_point(size = 4) +
+  geom_errorbar(width = 0.2) +
+  labs(title = "Group Means with Confidence Intervals",
+       x = "Age Group",
+       y = "BMI (Box-Cox Transformed)") +
+  theme_minimal()
+```
+
+The Young group has a distinctively lower BMI compared to the other two groups.
+
+The difference between the Middle-aged and Elderly groups is minor, as reflected in the overlapping confidence intervals and small effect size.
+
+# Multiple Comparison
+
+### Hypothesis for the Contrast:
+
+- **Null Hypothesis (\(H_0\))**: The mean BMI of the **Young** group is equal to the average BMI of the **Middle-aged** and **Elderly** groups:
+  \[
+  H_0: \mu_{Young} = \frac{\mu_{Middle-aged} + \mu_{Elderly}}{2}
+  \]
+
+- **Alternative Hypothesis (\(H_a\))**: The mean BMI of the **Young** group is different from the average BMI of the **Middle-aged** and **Elderly** groups:
+  \[
+  H_a: \mu_{Young} \neq \frac{\mu_{Middle-aged} + \mu_{Elderly}}{2}
+  \]
+
+
+
+### Linear Contrast Coefficients:
+
+To test this hypothesis, the contrast coefficients are:
+- **Young**: \(+1\)
+- **Middle-aged**: \(-0.5\)
+- **Elderly**: \(-0.5\)
+
+These coefficients represent the comparison of the **Young** group to the average of the other two groups.
+
+
+
+
+```{r}
+library(multcomp)
+
+# Fit the ANOVA model
+model <- aov(BMI ~ Age_Group, data = data)
+
+# Define the contrast matrix
+contrast_matrix <- matrix(c(
+  1, -0.5, -0.5  # Young vs. Average of Middle-aged and Elderly
+), nrow = 1, byrow = TRUE)
+
+rownames(contrast_matrix) <- c("Young vs. Average of Middle-aged & Elderly")
+
+# Perform the contrast test
+contrast_results <- glht(model, linfct = mcp(Age_Group = contrast_matrix))
+
+# Print the results
+summary(contrast_results)
+
+
+```
+
+
+The analysis demonstrates a significant difference between the BMI of the Young group and the average of the Middle-aged and Elderly groups. The difference is substantial and statistically robust.
+
+# 5. ANOVA for Completely Randomized Designs 
+
+```{r}
+# Create BMI categories
+data$BMI_Category <- cut(
+  data$BMI,
+  breaks = c(-Inf, 18.5, 25, 30, Inf),
+  labels = c("Underweight", "Normal", "Overweight", "Obese")
+)
+
+# Verify BMI categories
+table(data$BMI_Category)
+```
+
+**Homogeneity of Variances:**
+
+```{r}
+library(car)
+leveneTest(Glucose_Oral ~ BMI_Category, data = data)
+```
+Since variances are Unequal we use Welch's ANOVA
+
+```{r}
+bmi_anova <- oneway.test(Glucose_Oral ~ BMI_Category, data = data, var.equal = FALSE)
+bmi_anova
+```
+**Games-Howell instead of Tukey's HSD (because of unequal variances):**
+
+```{r}
+library(PMCMRplus)
+gamesHowellTest(Glucose_Oral ~ BMI_Category, data = data)
+```
+**Summary of Results:**
+Significant differences exist between most pairwise comparisons except:
+- Underweight vs. Normal (p = 0.505).
+- Overweight vs. Obese (p = 0.083).
+Conclusion:
+Oral glucose levels significantly increase as BMI moves from Underweight to Obese, with the largest differences observed between lower BMI categories (Underweight/Normal) and higher BMI categories (Overweight/Obese).
+
+# 6. ANOVA for Blocked Designs 
+
+Why Use Blocks?
+
+To remove unwanted variation caused by the blocking factor and improve the sensitivity of the analysis.
+
+**Research Question**: Does **BMI Category** and **Recreation Level** influence **Oral Glucose Levels**, while accounting for **Gender** as a block?
+
+
+
+### Factors in the Model:
+1. **Factor 1 (Primary)**: BMI Category (Underweight, Normal, Overweight, Obese).
+2. **Factor 2 (Secondary)**: Recreation Level (e.g., Level 1 and Level 2).
+3. **Blocking Factor**: Gender (Male, Female).
+
+
+
+### Hypotheses:
+1. **Main Effects**:
+   - \(H_0\): No difference in mean glucose levels across BMI categories.
+   - \(H_0\): No difference in mean glucose levels across recreation levels.
+2. **Interaction Effects**:
+   - \(H_0\): No interaction between BMI category and recreation level.
+3. **Blocking Effect**:
+   - \(H_0\): Gender does not affect glucose levels.
+
+
+
+### Steps for Multi-Way ANOVA with Blocking:
+
+#### **1. Define the Model**
+The model structure includes:
+- Two factors of interest (**BMI Category** and **Recreation Level**).
+- One blocking factor (**Gender**).
+\[
+\text{Response (Oral Glucose Levels)} = \text{BMI Category} + \text{Recreation Level} + \text{Gender} + (\text{BMI Category} \times \text{Recreation Level}) + \text{Error}
+\]
+
+
+
+### What This Analysis Tells You:
+1. **Main Effects**: Differences in glucose levels due to BMI categories, recreation levels, and gender.
+2. **Interaction Effects**: Whether the effect of BMI category depends on recreation level.
+3. **Blocking Factor**: Adjusts for the effect of gender on glucose levels.
+
+
+```{r}
+multiway_anova <- aov(Glucose_Oral ~ BMI_Category * Recreation + Gender, data = data)
+
+# Summarize results
+summary(multiway_anova)
+
+
+```
+
+- Significant Main Effects:
+Both BMI Category and Recreation Level significantly influence oral glucose levels.
+- Non-Significant Interaction:
+The interaction between BMI Category and Recreation is not significant, suggesting their effects are additive rather than multiplicative.
+- Blocking Factor (Gender):
+Gender does not significantly explain variation in glucose levels in this dataset.
+
+```{r}
+# Create an interaction plot for BMI_Category and Recreation Level
+interaction.plot(
+  x.factor = data$BMI_Category,   # BMI Category on the x-axis
+  trace.factor = data$Recreation, # Recreation levels as traces
+  response = data$Glucose_Oral,   # Oral Glucose levels as the response
+  fun = mean,                     # Function to calculate the mean response
+  col = c("blue", "red"),         # Colors for the Recreation levels
+  lty = 1,                        # Line types (solid)
+  pch = c(16, 17),                # Point characters for traces
+  xlab = "BMI Category",          # Label for the x-axis
+  ylab = "Mean Oral Glucose Levels", # Label for the y-axis
+  trace.label = "Recreation Level"   # Label for the legend
+)
+
+```
+# 7. ANCOVA
+
+Goal: To test whether categorical factors (e.g., BMI Category) affect a response variable (e.g., Oral Glucose Levels), after adjusting for the influence of continuous covariates (e.g., Age, BMI as a continuous variable, Insulin Levels).
+Covariate: A continuous variable that influences the response but is not the main factor of interest.
+
+Research Question:
+Does BMI Category influence Oral Glucose Levels after adjusting for Age as a covariate?
+
+Steps for ANCOVA
+1. Define the Model
+Categorical Factor (Main Effect): BMI Category (Underweight, Normal, Overweight, Obese).
+Covariate: Age (continuous variable).
+Response Variable: Oral Glucose Levels.
+Model formula:
+
+Response(Oral_Glucose_Levels)=BMI_Category+Age_(Covariate)+Error
+
+Check Assumptions
+ANCOVA has the following assumptions:
+
+Linearity: The relationship between the covariate and the response variable should be linear.
+Homogeneity of Slopes: The effect of the covariate should be consistent across all levels of the categorical factor.
+Normality of Residuals: The residuals should be normally distributed.
+Homogeneity of Variance: Variances should be approximately equal across groups.
+
+### For Linearity:
+
+```{r}
+plot(data$Respondent_Age, data$Glucose_Oral, main = "Scatterplot of Age vs. Glucose", xlab = "Age", ylab = "Oral Glucose Levels")
+abline(lm(Glucose_Oral ~ Respondent_Age, data = data), col = "blue")
+
+```
+
+### Homogeneity of Slopes:
+
+Test the interaction between the covariate and the categorical factor:
+
+```{r}
+ancova_interaction <- aov(Glucose_Oral ~ BMI_Category * Respondent_Age, data = data)
+summary(ancova_interaction)
+
+```
+
+
+### Normality of Residuals:
+
+```{r}
+shapiro.test(resid(ancova_interaction))
+```
+
+### Homogeneity of Variances:
+
+```{r}
+library(car)
+leveneTest(Glucose_Oral ~ BMI_Category, data = data)
+
+```
+
+### 5. Post-Hoc Tests (if Significant)
+
+```{r}
+library(emmeans)
+pairwise <- emmeans(ancova_interaction, pairwise ~ BMI_Category)
+pairwise
+
+```
+
+```{r}
+# Fit the ANCOVA model
+ancova_model <- aov(Glucose_Oral ~ BMI_Category + Respondent_Age, data = data)
+
+# Summarize the results
+summary(ancova_model)
+
+
+```
+
+
+Both BMI Category and Respondent Age independently and significantly affect Oral Glucose Levels.
+The interaction between BMI Category and Age is not significant, meaning that Age does not modify the relationship between BMI Category and Oral Glucose Levels.
